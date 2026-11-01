@@ -150,3 +150,7 @@ Before production: asymmetric JWT validation against the company IdP (JWKS) and 
 * Interest uses the principal at job-run time, so the job must run daily to be exact; a catch-up run after an outage uses the current balance.
 * A deposit confirmed for an already-closed account returns `409` and needs an ops refund (closing is blocked while a deposit is pending, so this requires a processor anomaly).
 * The simulated-time override (`ALLOW_SIMULATED_TIME`) exists only for tests and demos; the service refuses to start with it when `NODE_ENV=production`.
+* **Unbounded reads:** `/transactions`, `/audit` and `/statements` return every row for the account (no pagination). Fine for the expected size, a problem for a long-lived busy account.
+* **Linear batch work:** the daily job processes accounts one after another and `reconcile` scans every account. At scale, shard the job by account id and run `reconcile` incrementally.
+* **Accrual timing:** the job accrues interest for a date when it runs on that date (00:30 UTC), on the principal at that moment. This is a modelling choice, not a regulatory-grade day-count convention.
+* No CORS, security headers or WAF: the API is machine-to-machine behind a load balancer.
