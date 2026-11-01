@@ -119,7 +119,11 @@ Association: every commit made by a run carries `Refs: #N` and `AI-Run: <run-id>
 
 Known limitations: a PR opened with the default `GITHUB_TOKEN` does not start CI by itself (GitHub rule), so a human must push or reopen to trigger it, or the workflow must be switched to a fine-grained token or GitHub App; the PR checklist says so. The planning step that drafts `docs/backlog/*.md` is an AI-assisted manual step, not an automated one.
 
-## 9. Setup guide (owner, about ten minutes)
+## 9. Worked example
+
+[`ai-sdlc-example.md`](ai-sdlc-example.md) takes ISSUE-001 (a real defect in `capture`) through RED → GREEN → REVIEW with three subagents, including what the checks caught and what was not done.
+
+## 10. Setup guide (owner, about ten minutes)
 
 1. Push the branch and open a PR from it into `main` (nothing was pushed for you). Review and merge it yourself.
 2. In the repository settings: protect `main` (PR + 1 approval + the CI checks); create environments `backlog-approval` and `ai-execution` with **yourself as required reviewer**.
