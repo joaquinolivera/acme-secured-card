@@ -18,7 +18,7 @@ Legend. **Status:** Implemented / Partial / Missing. **Cover:** how well the exi
 | R-08 | Atomic rollback | Failed command leaves no rows (I10) | Implemented | integration | Strong: exception after money moved; rejected requests; duplicate reference | none known | none |
 | R-09 | Precision and validation | Integer cents, USD only, safe integers (I11) | Implemented | unit, API | Strong: floats, unsafe ints, currency, bigint parser, interest exactness | none known | none |
 | R-10 | Cross-account authorization | A customer reaches only their own account | Implemented | API | Strong: every customer endpoint; token forgery variants | none known | none |
-| R-11 | **Authorization hold lifecycle** | A hold that has expired can no longer become debt, regardless of whether the daily job has run | **Partial / defect** | API+DB, simulated clock | **Partial:** `billing` "lapsed authorizations" runs the job *first*; nothing tests `capture` between expiry and the job. `capture` never reads `expires_at` (`src/services/spending.ts`) | capture just after the TTL, before any job; capture exactly at the TTL; job after a rejected late capture leaves holds consistent | **GAP-1** |
+| R-11 | **Authorization hold lifecycle** | A hold that has expired can no longer become debt, regardless of whether the daily job has run | Implemented | API+DB, simulated clock | Strong: `test/authorization-expiry.test.ts` (late capture before any job, last instant and exact expiry instant, replay, audit row, job after rejection, mixed holds, over-amount, second key); `billing` "lapsed authorizations" | none known | GAP-1 fixed on branch fix/capture-expired-authorization (PR pending human approval) |
 
 ## P1: reliability and maintainability
 
@@ -44,7 +44,7 @@ Legend. **Status:** Implemented / Partial / Missing. **Cover:** how well the exi
 | R-33 | Limit increase | Implemented | `core` top-up (also frozen) |
 | R-34 | Card freezing | Implemented | `core`, `ops` |
 
-Per the workflow rule, no P2 work is scheduled before every P0 row is demonstrably correct. R-11 is the only P0/P1 row with a missing scenario that points at a defect; it is the first slice.
+Per the workflow rule, no P2 work is scheduled before every P0 row is demonstrably correct. R-11 was the only P0/P1 row with a missing scenario that pointed at a defect; its fix (the first slice) is on branch fix/capture-expired-authorization, pending human approval.
 
 ## Verification evidence
 
