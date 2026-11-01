@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.sql text eol=lf
+*.png binary
+*.zip binary
+package-lock.json -diff
