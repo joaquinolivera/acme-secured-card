@@ -16,7 +16,13 @@ const capture = (authId: string, key?: string) =>
   call(app, 'POST', `/v1/authorizations/${authId}/capture`, { role: 'processor', body: {}, key });
 const getAuth = async (authId: string) => (await call(app, 'GET', `/v1/authorizations/${authId}`, { role: 'ops' })).body;
 const principalRows = async (accountId: string) =>
-  Number((await pool.query(`SELECT count(*) AS n FROM ledger_entries WHERE account_id=$1 AND ledger_account='receivable_principal'`, [accountId])).rows[0].n);
+  Number(
+    (
+      await pool.query(`SELECT count(*) AS n FROM ledger_entries WHERE account_id=$1 AND ledger_account='receivable_principal'`, [
+        accountId,
+      ])
+    ).rows[0].n,
+  );
 
 /** Authorizes 20_000 at 2026-01-01T12:00:00Z; expires_at is read back from the API, with no daily job run. */
 async function lateScenario() {
@@ -48,6 +54,9 @@ describe('R-11 capture of an expired authorization (no daily job)', () => {
     expect(after.ledgerTxns).toBe(before.ledgerTxns);
     expect(after.ledgerEntries).toBe(before.ledgerEntries);
     expect(after.audit).toBeGreaterThan(before.audit); // the rejection is audited
+    const last = (await pool.query('SELECT action, details FROM audit_log WHERE account_id=$1 ORDER BY seq DESC LIMIT 1', [id])).rows[0];
+    expect(last.action).toBe('AUTHORIZATION_EXPIRED');
+    expect(last.details.authorizationId).toBe(authId);
 
     const replay = await capture(authId, key);
     expect(replay.status).toBe(409);
