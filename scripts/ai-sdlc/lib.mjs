@@ -181,6 +181,13 @@ export function checkScope(role, files) {
   return { ok: violations.length === 0, violations };
 }
 
+/**
+ * Paths written by the orchestrator and by the transcript-capture hook, not by an agent. They are ignored by role-scope checks
+ * and are committed once, with the run record.
+ */
+export const MANAGED_PATHS = ['ai-logs/runs/', 'ai-logs/claude-code/'];
+export const isManagedPath = (f) => MANAGED_PATHS.some((m) => f.startsWith(m));
+
 export function changedFiles(repo, baseRef) {
   const run = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8' }).split('\n').filter(Boolean);
   return [...new Set([...run('diff', '--name-only', baseRef), ...run('ls-files', '--others', '--exclude-standard')])].sort();

@@ -504,3 +504,35 @@ describe('AI transparency gate (scripts/check-ai-logs.mjs)', () => {
     expect(r.out).toMatch(/r10\/run\.json is not referenced/);
   });
 });
+
+describe('check-scope CLI', () => {
+  const scope = (repo: string, role: string) => {
+    try {
+      return {
+        code: 0,
+        out: execFileSync('node', [path.join(ROOT, 'scripts', 'ai-sdlc', 'check-scope.mjs'), '--role', role], {
+          cwd: repo,
+          encoding: 'utf8',
+          stdio: 'pipe',
+        }),
+      };
+    } catch (e) {
+      const err = e as { status: number; stdout: string };
+      return { code: err.status, out: err.stdout };
+    }
+  };
+
+  it('ignores orchestrator-managed run records and hook transcripts, like the orchestrator does, but still flags real violations', () => {
+    const repo = makeRepo();
+    mkdirSync(path.join(repo, 'ai-logs', 'runs', 'issue-1', 'r1'), { recursive: true });
+    mkdirSync(path.join(repo, 'ai-logs', 'claude-code'), { recursive: true });
+    writeFileSync(path.join(repo, 'ai-logs', 'runs', 'issue-1', 'r1', 'test.prompt.md'), 'p');
+    writeFileSync(path.join(repo, 'ai-logs', 'claude-code', 's.jsonl'), '{}\n');
+    writeFileSync(path.join(repo, 'test', 'new.test.ts'), 'x');
+    expect(scope(repo, 'test').code).toBe(0);
+    writeFileSync(path.join(repo, 'src', 'sneaky.ts'), 'x');
+    const bad = scope(repo, 'test');
+    expect(bad.code).toBe(1);
+    expect(JSON.parse(bad.out).violations).toEqual(['src/sneaky.ts']);
+  });
+});

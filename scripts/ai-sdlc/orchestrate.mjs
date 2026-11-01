@@ -14,7 +14,16 @@ import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { changedFiles, checkScope, fenceUntrusted, parseAcceptanceCriteria, sanitizeUntrusted, slugify } from './lib.mjs';
+import {
+  MANAGED_PATHS,
+  changedFiles,
+  checkScope,
+  isManagedPath,
+  fenceUntrusted,
+  parseAcceptanceCriteria,
+  sanitizeUntrusted,
+  slugify,
+} from './lib.mjs';
 
 const ROLE_FILES = { test: 'test-engineer', impl: 'implementation-engineer', review: 'independent-reviewer' };
 const TOOLS = {
@@ -25,10 +34,8 @@ const TOOLS = {
 const SETUP_ERRORS = /SyntaxError|Cannot find module|ERR_MODULE_NOT_FOUND|ReferenceError|TypeError|Failed to resolve import/;
 const ASSERTION = /AssertionError|AssertionFailed|expected .* to |expected \S+ to/i;
 const TRAILER = 'Co-Authored-By: Claude <noreply@anthropic.com>';
-// Written by the orchestrator and by the transcript-capture hook, not by the agent: excluded from role-scope checks and from
-// the RED/GREEN commits, and committed once at the end with the run record.
-const MANAGED = ['ai-logs/runs/', 'ai-logs/claude-code/'];
-const isManaged = (f) => MANAGED.some((m) => f.startsWith(m));
+const isManaged = isManagedPath;
+const MANAGED = MANAGED_PATHS;
 
 function sh(cmd, cwd, extraEnv = {}) {
   const r = spawnSync(cmd, { cwd, shell: true, encoding: 'utf8', env: { ...process.env, ...extraEnv }, maxBuffer: 64 * 1024 * 1024 });
