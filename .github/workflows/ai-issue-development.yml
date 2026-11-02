@@ -1,0 +1,168 @@
+name: AI issue-driven development
+
+# Starts when a maintainer adds the `ai-ready` label to an issue, or manually. The execution job is OFF unless the
+# repository variable AI_EXECUTE_ENABLED is 'true', needs the ANTHROPIC_API_KEY secret, and waits for approval of the
+# `ai-execution` environment (configure required reviewers) before any paid run. It creates an `ai/issue-N-*` branch and a
+# DRAFT pull request. It never merges, never pushes to the default branch, and issue text is treated as untrusted data.
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number'
+        required: true
+        type: string
+      mode:
+        description: 'tdd: write a failing test first. characterize: the behaviour already works, pin it with a passing test'
+        type: choice
+        options: [auto, tdd, characterize]
+        default: auto
+
+permissions: {}
+
+concurrency:
+  group: ai-issue-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+  GH_REPO: ${{ github.repository }}
+  CLAUDE_CODE_VERSION: '2.1.316'
+
+jobs:
+  authorize:
+    name: Check actor and issue eligibility
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-ready' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: read
+    outputs:
+      issue: ${{ steps.check.outputs.issue }}
+    steps:
+      - name: Verify
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          EVENT: ${{ github.event_name }}
+          ISSUE_INPUT: ${{ github.event.issue.number || inputs.issue_number }}
+        run: |
+          set -euo pipefail
+          [[ "$ISSUE_INPUT" =~ ^[0-9]+$ ]] || { echo "::error::issue number must be numeric"; exit 1; }
+          perm=$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${ACTOR}/permission" --jq .permission)
+          case "$perm" in admin|maintain|write) ;; *) echo "::error::${ACTOR} has '${perm}' permission; write access is required to start AI work"; exit 1 ;; esac
+          labels=$(gh issue view "$ISSUE_INPUT" --json state,labels --jq '[.state, (.labels | map(.name) | join(","))] | join(" ")')
+          case "$labels" in OPEN*) ;; *) echo "::error::issue is not open"; exit 1 ;; esac
+          case ",${labels#OPEN }," in *,needs-decision,*|*,ai-blocked,*) echo "::error::issue is labelled needs-decision or ai-blocked"; exit 1 ;; esac
+          if [ "$EVENT" = "issues" ]; then case ",${labels#OPEN }," in *,ai-ready,*) ;; *) echo "::error::missing ai-ready"; exit 1 ;; esac; fi
+          echo "issue=${ISSUE_INPUT}" >> "$GITHUB_OUTPUT"
+
+  develop:
+    name: RED → GREEN → REVIEW → draft PR
+    needs: authorize
+    if: ${{ vars.AI_EXECUTE_ENABLED == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: ai-execution
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: acme_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d acme_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/acme_test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/acme_test
+      JWT_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+      ISSUE: ${{ needs.authorize.outputs.issue }}
+      MODE_INPUT: ${{ inputs.mode }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false # the token must not sit in .git/config where an agent could read it
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Install the pinned Claude Code CLI
+        run: npm install --global "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+      - name: Mark the issue in progress and fetch it (as data, never as shell input)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh issue edit "$ISSUE" --add-label ai-in-progress
+          gh issue view "$ISSUE" --json number,title,body,labels > issue-raw.json
+          node -e '
+            const raw = JSON.parse(require("fs").readFileSync("issue-raw.json", "utf8"));
+            const t = (raw.labels.map((l) => l.name).find((n) => n.startsWith("type/")) ?? "type/bug").slice(5);
+            require("fs").writeFileSync("issue.json", JSON.stringify({ number: raw.number, title: raw.title, body: raw.body, type: t }));
+          '
+      - name: Git identity
+        run: |
+          git config user.name "ai-sdlc[bot]"
+          git config user.email "ai-sdlc@users.noreply.github.com"
+      - name: Run the agentic TDD orchestrator (no repository token is exposed to the agents)
+        id: run
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mode=""
+          case "$MODE_INPUT" in tdd|characterize) mode="--mode $MODE_INPUT" ;; esac
+          set +e
+          node scripts/ai-sdlc/orchestrate.mjs --issue-file issue.json $mode > result.json
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat result.json
+      - name: Upload run records and Claude Code transcripts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ai-run-issue-${{ needs.authorize.outputs.issue }}
+          path: |
+            ai-logs/runs
+            result.json
+            /home/runner/.claude/projects
+          if-no-files-found: warn
+      - name: Push the branch and open a DRAFT pull request
+        if: ${{ steps.run.outputs.code == '0' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch=$(node -p 'JSON.parse(require("fs").readFileSync("result.json","utf8")).branch')
+          [[ "$branch" =~ ^ai/issue-[0-9]+-[a-z0-9-]*$ ]] || { echo "::error::unexpected branch name"; exit 1; }
+          # the token is passed only to this command (never written to the repository); only ai/issue-* branches are pushed
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${branch}"
+          node scripts/ai-sdlc/pr-body.mjs result.json "$ISSUE" > pr-body.md
+          title=$(node -p 'JSON.parse(require("fs").readFileSync("issue.json","utf8")).title.replace(/[\r\n]+/g, " ").slice(0, 200)')
+          if url=$(gh pr create --draft --base "$DEFAULT_BRANCH" --head "$branch" --title "$title" --body-file pr-body.md); then
+            gh issue comment "$ISSUE" --body "AI run finished. Draft PR: ${url} (human review required; nothing is merged automatically)."
+          else
+            gh issue comment "$ISSUE" --body "AI run finished and pushed \`${branch}\`, but the PR could not be created (the repository setting 'Allow GitHub Actions to create pull requests' may be off). Open it here: https://github.com/${GITHUB_REPOSITORY}/compare/${DEFAULT_BRANCH}...${branch}?expand=1"
+          fi
+          gh issue edit "$ISSUE" --remove-label ai-in-progress --remove-label ai-ready
+      - name: Stop and ask for a human when the run did not succeed
+        if: ${{ always() && steps.run.outputs.code != '0' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status=$(node -p 'try { JSON.parse(require("fs").readFileSync("result.json","utf8")).status } catch { "no-result" }')
+          gh issue edit "$ISSUE" --add-label ai-blocked --remove-label ai-in-progress --remove-label ai-ready || true
+          gh issue comment "$ISSUE" --body "AI run stopped with status \`${status}\`. Nothing was pushed. Run records are attached to the workflow run as an artifact."
