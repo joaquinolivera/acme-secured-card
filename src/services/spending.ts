@@ -69,6 +69,18 @@ async function lockAuth(tx: Tx, authId: string): Promise<{ auth: Record<string, 
 export async function capture(tx: Tx, actor: Actor, authId: string, amountCents: number | undefined, requestId?: string) {
   const { auth, account } = await lockAuth(tx, authId);
   if (auth.status !== 'AUTHORIZED') throw invalidState(`authorization is ${auth.status}`);
+  if (clock.now() > new Date(auth.expires_at)) {
+    // Lapsed (strictly after expires_at, as in expireAuthorizations): record the release instead of throwing, which would roll it back.
+    await releaseHold(tx, account.id, { id: auth.id, amount_cents: auth.amount_cents }, 'EXPIRED');
+    await audit(tx, {
+      accountId: account.id,
+      actor,
+      action: 'AUTHORIZATION_EXPIRED',
+      requestId,
+      details: { authorizationId: authId, trigger: 'capture' },
+    });
+    return { status: 409, body: { error: { code: 'AUTHORIZATION_EXPIRED', message: 'authorization has expired', requestId } } };
+  }
   const amount = amountCents ?? auth.amount_cents;
   if (amount > auth.amount_cents) throw new AppError(422, 'CAPTURE_EXCEEDS_AUTH', 'capture amount exceeds the authorization');
   if (account.status === 'CLOSED') throw invalidState('account is closed');
