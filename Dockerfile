@@ -15,5 +15,6 @@ COPY package.json ./
 COPY migrations ./migrations
 USER node
 EXPOSE 3000
-HEALTHCHECK --interval=15s --timeout=3s CMD wget -qO- http://localhost:3000/healthz || exit 1
+# 127.0.0.1, not localhost: on Alpine "localhost" resolves to ::1 first and the server listens on IPv4 (0.0.0.0) only.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s CMD wget -qO- http://127.0.0.1:3000/healthz || exit 1
 CMD ["node", "dist/server.js"]
