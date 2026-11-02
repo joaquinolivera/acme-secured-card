@@ -26,6 +26,7 @@ tool was used before the first session.
 * **Claude Code:** `.claude/settings.json` registers `scripts/capture-transcript.mjs` on the `Stop` and `SubagentStop` hooks. After every
   response it copies the raw JSONL transcript (and subagent transcripts) to `ai-logs/claude-code/`. Verified only with synthetic hook input
   (copy works, missing files and malformed input never block the session); it has **not** been exercised by a real Claude Code run.
+* **Issue-driven AI runs:** `scripts/ai-sdlc/orchestrate.mjs` stores, for every agent turn, the exact prompt, the raw agent output, session id, cost and the commands run, under `ai-logs/runs/issue-N/<run-id>/`. Reference the folder once here (`ai-logs/runs/issue-N/<run-id>/`). See `docs/ai-sdlc.md` §7 for what each layer does and does not capture.
 * **claude.ai chats:** export manually and save under `ai-logs/claude-ai/` (instructions in `ai-logs/README.md`).
 * **Submission gate:** `npm run check:ai-logs` fails while any source is `MISSING`, any transcript file is unindexed here, or no
   transcripts exist. `npm run check:ai-logs -- --allow-gaps` downgrades MISSING rows to warnings for a submission that discloses the gaps.
