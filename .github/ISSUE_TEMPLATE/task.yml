@@ -1,0 +1,69 @@
+name: Engineering task
+description: A defect, missing test or enhancement with evidence and acceptance criteria. Writing it well is what lets the AI workflow work on it safely.
+title: ''
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill in every field. An issue without **evidence** and **acceptance criteria** will not be accepted for AI work.
+        A maintainer adds the `ai-ready` label only after reading it. Do not paste secrets or customer data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What is wrong or missing, and why it matters (financial risk, requirement).
+    validations: { required: true }
+  - type: input
+    id: requirement
+    attributes:
+      label: Requirement reference
+      description: Row ID in docs/tdd-matrix.md (for example R-11) or the challenge requirement.
+    validations: { required: true }
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: P0 can lose money or break an invariant; P1 is an important reliability, test or documentation gap; P2 is optional.
+      options: [P0, P1, P2]
+    validations: { required: true }
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options: [bug, test, enhancement]
+    validations: { required: true }
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence from the codebase
+      description: Files and functions in backticks (for example `src/services/spending.ts`), commands you ran and what they showed. No speculation.
+    validations: { required: true }
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and non-goals
+    validations: { required: true }
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: One checkbox per testable criterion, for example `- [ ] Capture after expiry returns 409`.
+      value: '- [ ] '
+    validations: { required: true }
+  - type: textarea
+    id: tests
+    attributes:
+      label: Required tests
+    validations: { required: true }
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and decisions needed
+      description: If a product decision is required first, say so; the issue will be labelled `needs-decision` and not started.
+    validations: { required: true }
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of Done
+    validations: { required: true }
