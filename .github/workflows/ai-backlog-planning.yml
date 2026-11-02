@@ -1,0 +1,82 @@
+name: AI backlog planning
+
+# Manual only. Validates the AI-drafted specs in docs/backlog/, compares them with existing issues and PRs, and shows
+# the plan. Publishing requires `publish: true` AND approval of the `backlog-approval` environment (configure required
+# reviewers there: that is the human gate). Nothing here calls a paid AI API, and nothing is ever labelled `ai-ready`.
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish the NEW issues after the backlog-approval environment is approved'
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: ai-backlog-planning
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  plan:
+    name: Validate drafts and detect duplicates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Plan
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ai-sdlc/plan-backlog.mjs --out plan.json --summary plan-summary.md
+      - name: Show the plan
+        if: always()
+        run: |
+          if [ -f plan-summary.md ]; then cat plan-summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: backlog-plan
+          path: |
+            plan.json
+            plan-summary.md
+          if-no-files-found: ignore
+
+  publish:
+    name: Publish approved issues
+    needs: plan
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: backlog-approval
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Re-plan from this exact commit, then publish (duplicates are re-checked right before each create)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/ai-sdlc/plan-backlog.mjs --out plan.json --summary plan-summary.md
+          node scripts/ai-sdlc/publish-issues.mjs --plan plan.json | tee publish-result.json
+          { echo '## Published'; echo '```json'; cat publish-result.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
