@@ -1,0 +1,31 @@
+# docker compose up --build   -> API on http://localhost:3000, Postgres on :5432
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: acme
+      POSTGRES_PASSWORD: acme
+      POSTGRES_DB: acme
+    ports: ['5432:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U acme -d acme']
+      interval: 3s
+      retries: 20
+  api:
+    build: .
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://acme:acme@db:5432/acme
+      JWT_SECRET: local-dev-secret-change-me-0123456789abcdef
+      AUTO_MIGRATE: 'true'
+    ports: ['3000:3000']
+  daily-job: # run on demand: docker compose run --rm daily-job
+    build: .
+    profiles: ['jobs']
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://acme:acme@db:5432/acme
+      JWT_SECRET: local-dev-secret-change-me-0123456789abcdef
+    command: ['node', 'dist/jobs/daily.js']
