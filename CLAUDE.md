@@ -41,8 +41,13 @@ any database name that does not contain "test".
 
 ## Git
 
-Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `ci:`, `chore:`). Do not rewrite history. Do not push, create remotes or change
-repository visibility without the owner's explicit approval.
+Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `ci:`, `chore:`). Do not rewrite history.
+
+* **Never commit to `main`.** Create a focused branch first (`feat/…`, `fix/…`, `test/…`, `docs/…`, `chore/…`), one concern per branch.
+* **`main` changes only through a pull request that the owner has approved.** Do not merge, force-push, or push to `main`, and do not
+  enable auto-merge.
+* Do not push any branch, create remotes or change repository visibility without the owner's explicit approval.
+* AI agents (including the issue-driven workflow) may open a *draft* PR at most; a human reviews and merges.
 
 ## AI transparency (mandatory for this challenge)
 
@@ -58,3 +63,9 @@ The submission needs **every AI prompt and response, in chronological order**, a
 
 `financial-correctness` (audit money paths), `test-strategy` (risk-based tests), `code-review` (strict review). Use them instead of ad hoc
 checklists.
+
+## Agents (in `.claude/agents/`, used by the agentic TDD workflow; see `docs/ai-sdlc.md`)
+
+`test-engineer` (RED: tests only), `implementation-engineer` (GREEN: smallest production change, never edits tests), `independent-reviewer`
+(read-only, reports P0/P1/P2). Hand off sequentially; the orchestrator verifies each handoff (RED must fail on an assertion, role scope is
+checked from `git diff`). For behaviour that already works write a characterization test; never break working code to get a RED.

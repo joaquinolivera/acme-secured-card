@@ -2,7 +2,8 @@
 // Submission gate for the "AI transparency" requirement. Usage: npm run check:ai-logs [-- --allow-gaps]
 //  - fails if ai-logs/ holds no transcript files
 //  - fails if PROMPTS.md lists a source as MISSING (unless --allow-gaps: then the gaps must be disclosed there)
-//  - fails if a transcript file is not referenced in PROMPTS.md, or PROMPTS.md references a file that does not exist
+//  - fails if a transcript file is not referenced in PROMPTS.md (by its path, or by a containing directory such as a run
+//    folder `ai-logs/runs/issue-12/<run-id>/`), or PROMPTS.md references a path that does not exist
 //  - prints size, sha256 and the time span of each JSONL transcript so completeness can be eyeballed
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -20,6 +21,9 @@ function walk(dir) {
   });
 }
 
+const referenced = [
+  ...(existsSync(path.join(root, 'PROMPTS.md')) ? readFileSync(path.join(root, 'PROMPTS.md'), 'utf8') : '').matchAll(/`(ai-logs\/[^`]+)`/g),
+].map((m) => m[1]);
 const files = existsSync(logsDir) ? walk(logsDir).filter((f) => !/README\.md$|\.gitkeep$/.test(f)) : [];
 const prompts = existsSync(path.join(root, 'PROMPTS.md')) ? readFileSync(path.join(root, 'PROMPTS.md'), 'utf8') : '';
 
@@ -45,7 +49,8 @@ for (const f of files) {
     if (stamps.length) span = ` ${stamps[0]} -> ${stamps[stamps.length - 1]}`;
   }
   console.log(`${rel}  ${statSync(f).size} bytes  sha256:${createHash('sha256').update(buf).digest('hex').slice(0, 16)}${span}`);
-  if (!prompts.includes(rel)) problems.push(`${rel} is not referenced in PROMPTS.md`);
+  const covered = referenced.some((r) => rel === r || (r.endsWith('/') && rel.startsWith(r)));
+  if (!covered) problems.push(`${rel} is not referenced in PROMPTS.md`);
 }
 
 for (const m of prompts.matchAll(/`(ai-logs\/[^`]+)`/g)) {

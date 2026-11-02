@@ -1,0 +1,97 @@
+{
+  "runId": "slice-1-manual",
+  "kind": "manual orchestration by the assistant using three subagents; NOT executed by scripts/ai-sdlc/orchestrate.mjs",
+  "issue": {
+    "backlog": "ISSUE-001",
+    "file": "docs/backlog/ISSUE-001-capture-expired-authorization.md",
+    "githubIssue": null,
+    "note": "no GitHub issue exists yet: the repository was not reachable from the build environment"
+  },
+  "branch": "fix/capture-expired-authorization",
+  "base": "feat/ai-sdlc-workflow",
+  "mode": "tdd",
+  "date": "2026-11-01",
+  "phases": [
+    {
+      "role": "test-engineer",
+      "files": ["test.prompt.md", "test.report.md"],
+      "filesChanged": ["test/authorization-expiry.test.ts"],
+      "scope": "ok"
+    },
+    {
+      "role": "implementation-engineer",
+      "files": ["impl.prompt.md", "impl.report.md"],
+      "filesChanged": ["src/services/spending.ts"],
+      "scope": "ok"
+    },
+    {
+      "role": "independent-reviewer",
+      "files": ["review.prompt.md", "review.report.md"],
+      "filesChanged": [],
+      "scope": "ok (read-only confirmed by git status)"
+    }
+  ],
+  "handoffs": [
+    "RED: 1 failed (expected 200 to be 409 at test/authorization-expiry.test.ts:39), 2 passed (characterization). Orchestrator re-ran it and checked git diff scope.",
+    "Orchestrator added a boundary decision (strictly after expires_at) and had the Test Engineer pin it.",
+    "Orchestrator mutation check M3 (audit action renamed) SURVIVED; the Test Engineer strengthened the audit assertion; re-run caught it.",
+    "GREEN: implementation by the Implementation Engineer; it stopped at a format failure in the Test Engineer file instead of editing it; formatting was routed back to the Test Engineer (token-identical diff confirmed).",
+    "REVIEW: 0 P0, 3 P1, 2 P2. P1s routed to the Test Engineer (4 tests + matrix row). P2s accepted without change (comment length; FROZEN/CLOSED late capture releases the lapsed hold and answers AUTHORIZATION_EXPIRED)."
+  ],
+  "checks": [
+    {
+      "cmd": "npx vitest run test/authorization-expiry.test.ts (before the fix)",
+      "result": "1 failed, 2 passed; failure = AssertionError expected 200 to be 409"
+    },
+    {
+      "cmd": "npx vitest run test/billing.test.ts test/core.test.ts (regression, before the fix)",
+      "result": "21 passed"
+    },
+    {
+      "cmd": "mutations of the fix: >= boundary; no release; wrong audit action; guard removed; wrong audit id; release whole hold; check after the 422",
+      "result": "all caught by the test file after strengthening (the audit-action mutation survived once, before strengthening)"
+    },
+    {
+      "cmd": "npm run verify (after the fix and tests)",
+      "result": "format, lint, typecheck OK; 9 files, 105 tests passed; build OK"
+    },
+    {
+      "cmd": "npx vitest run test/authorization-expiry.test.ts x3",
+      "result": "7 passed each time (no flakiness)"
+    }
+  ],
+  "review": [
+    {
+      "severity": "P1",
+      "file": "docs/tdd-matrix.md",
+      "summary": "R-11 row not updated",
+      "resolved": true
+    },
+    {
+      "severity": "P1",
+      "file": "test/authorization-expiry.test.ts",
+      "summary": "job after a rejected late capture untested",
+      "resolved": true
+    },
+    {
+      "severity": "P1",
+      "file": "test/authorization-expiry.test.ts",
+      "summary": "single-authorization held assertion; partial and over-amount late capture untested",
+      "resolved": true
+    },
+    {
+      "severity": "P2",
+      "file": "test/authorization-expiry.test.ts",
+      "summary": "retry with new key; FROZEN/CLOSED",
+      "resolved": "retry covered; FROZEN/CLOSED accepted as is"
+    },
+    {
+      "severity": "P2",
+      "file": "src/services/spending.ts",
+      "summary": "comment length; redundant new Date(); trigger field in audit details",
+      "resolved": false
+    }
+  ],
+  "transcripts": "Only the prompts the orchestrator sent and the final reports the subagents returned are preserved in this folder. The subagents internal tool calls are NOT available, so these are not complete transcripts.",
+  "status": "ready_for_pr (pending human approval; nothing pushed, no PR opened)"
+}

@@ -11,6 +11,13 @@
 - [ ] New failure paths are tested (not only the happy path)
 - [ ] No secrets, tokens, or real customer data added
 
+## AI assistance
+
+- [ ] Not AI-assisted, or:
+- AI run id (`ai-logs/runs/issue-N/<run-id>/`): <!-- from the PR body or run.json -->
+- [ ] I read the diff myself; the independent review had no unresolved P0
+- [ ] Transcripts are indexed in `PROMPTS.md` (`npm run check:ai-logs`)
+
 ## Verification
 
 <!-- Paste the real output of `npm run verify` (format, lint, typecheck, tests, build). -->
