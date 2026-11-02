@@ -33,14 +33,14 @@ Trust boundary: everything arriving over HTTP is untrusted until the bearer toke
 | T8 | Rewriting history (editing ledger or audit rows) | Append-only triggers; hash chain; `reconcile` | Tested, including a privileged edit being detected. A full-chain recomputation by a DB superuser is **not** detected (see T13) |
 | T9 | Money created or destroyed by a bug | Balanced-transaction deferred trigger; `CHECK` constraints; `reconcile` | Tested |
 | T10 | Information leakage in errors and logs | Uniform error shape, no stack/SQL in responses, `Authorization` header redacted from logs | Tested for response bodies; log redaction configured, not asserted |
-| T11 | Secrets in the repository | No default for `JWT_SECRET` (service refuses to start without a ≥32-char secret); `.env.example` has no value; gitleaks in CI over full history | Tested (config), CI job defined. CI not executed here |
+| T11 | Secrets in the repository | No default for `JWT_SECRET` (service refuses to start without a ≥32-char secret); `.env.example` has no value; gitleaks in CI over full history | Tested (config); the CI gitleaks job passes over the full history ([run](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41384405357)) |
 | T12 | Simulated-time override abused to post arbitrary billing dates | Off by default; process refuses to start with it when `NODE_ENV=production`; also requires the ops role | Tested |
 | T13 | Audit chain recomputed by an attacker with full database control | Not mitigated in code. Mitigation: periodically anchor the chain head in S3 Object Lock | Designed only |
 | T14 | Shared-secret JWT compromise lets anyone mint any role | Not mitigated in code. Mitigation: IdP-issued RS256/ES256 tokens verified via JWKS; mTLS for the processor | Designed only |
 | T15 | Replay of a captured webhook request | Idempotent-by-state and unique references make replays harmless for money. No request signing or timestamp window | Partially mitigated |
 | T16 | Denial of service (request floods, expensive endpoints) | Body limit; per-account locking prevents one account starving others. No rate limiting | **Not implemented**; belongs at WAF/ALB |
 | T17 | Database or task compromise | Private subnets, security groups ALB → app → DB only, encryption at rest, Secrets Manager, empty task IAM role | Designed only; not applied |
-| T18 | Vulnerable dependencies | `npm audit` (prod and dev) in CI; Dependabot for npm, Actions and Docker; pinned Action SHAs | Audit run locally: 0 vulnerabilities. CI not executed here |
+| T18 | Vulnerable dependencies | `npm audit` (prod and dev) in CI; Dependabot for npm, Actions and Docker; pinned Action SHAs | 0 vulnerabilities locally and in the CI `security` job ([run](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41384405357)) |
 
 ## Residual risks, stated plainly
 

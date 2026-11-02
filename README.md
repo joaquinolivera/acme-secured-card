@@ -14,7 +14,7 @@ A service that owns the lending flow of a **secured credit card**. The customer 
 
 ## Quick start
 
-**Docker** (API on :3000, PostgreSQL on :5432, migrations applied on start; *not executed in the build environment, CI runs it*):
+**Docker** (API on :3000, PostgreSQL on :5432, migrations applied on start; *the CI `docker` job builds the image, starts this stack and runs the demo against it*):
 
 ```bash
 docker compose up --build
@@ -104,7 +104,7 @@ infra/terraform/        AWS: VPC, ALB, ECS Fargate, RDS Multi-AZ, Secrets Manage
 
 ## CI
 
-`.github/workflows/ci.yml` runs on pull requests to `main` and pushes to `main` with read-only permissions and SHA-pinned actions: format, lint, typecheck, build; tests against a PostgreSQL service container; `npm audit` and a checksum-verified gitleaks scan of the full history; a Docker compose smoke test running the demo; `terraform fmt` and `validate`. There is no Go-style race detector for Node; races are covered by the concurrent integration tests. **The workflow has not been run on GitHub yet**; each command was run locally except the Docker, Terraform-validate and gitleaks-in-CI steps (see the engineering review for what was and was not executed).
+`.github/workflows/ci.yml` runs on pull requests to `main` and pushes to `main` with read-only permissions and SHA-pinned actions: format, lint, typecheck, build; tests against a PostgreSQL service container; `npm audit` and a checksum-verified gitleaks scan of the full history; a Docker compose smoke test running the demo; `terraform fmt` and `validate`. There is no Go-style race detector for Node; races are covered by the concurrent integration tests. **First GitHub run (PR #1): 4 of 5 jobs passed; the Docker job failed on a real bug (a `localhost` health check that Alpine resolves to IPv6), which was fixed; the next run passed all five jobs** ([run](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41384405357)). See the engineering review for what was and was not executed.
 
 ## Before submitting (AI transparency is mandatory)
 

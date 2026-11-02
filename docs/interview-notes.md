@@ -40,7 +40,7 @@ npm run demo                   # end-to-end walkthrough (server running)
 
 ## Be ready to admit
 
-* Docker, Terraform validate and the CI workflow were written but not executed in my build environment; the first CI run is the real test.
+* Docker, Terraform and the CI workflow could not run in my build environment. The first GitHub CI run found a real bug (the container health check used `localhost`, which Alpine resolves to IPv6); it was fixed and the second run passed all five jobs. Say so plainly: it shows why CI matters. `terraform plan/apply` were still never run.
 * The AI transcripts were not exportable from inside the session; you export them (see `PROMPTS.md`).
 * No load tests, no coverage number, no rate limiting, HS256 dev tokens.
 * The first AI-assisted version had real defects that the audit caught and fixed (F1 customer-asserted repayments, F3 audit hashing, wrong claims in its own summary). Say so plainly, and say how you directed the AI: audit before changing, tests first, mutation checks, never claim an unrun check. That is the "directing AI" the challenge asks to see.

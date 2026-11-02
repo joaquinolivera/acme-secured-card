@@ -23,11 +23,13 @@ Reviewer stance: skeptical staff engineer evaluating a senior backend candidate.
 
 ## 2. What was not executed
 
+GitHub CI executed the workflow on PR #1: run 1 ([failed](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41384217804)) passed 4 of 5 jobs and exposed a real bug in the Docker health check (audit F17); after the fix, run 2 ([passed](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41384405357)) passed all five: format/lint/typecheck/build, 73 tests on a PostgreSQL service, audit + gitleaks, the compose stack with the demo against the container, and `terraform fmt` + `validate`.
+
 | Item | Why | Where it will be exercised |
 |---|---|---|
-| `docker build`, `docker compose up` | no Docker daemon in the build environment | CI job `docker` |
-| `terraform validate` / `plan` / `apply` | provider registry blocked (OpenTofu `init` failed with 403); nothing applied | CI job `terraform` |
-| The GitHub Actions workflow itself | no runner; YAML syntax was parsed and each command run locally | first push |
+| `terraform plan` / `apply` | no AWS credentials; nothing was applied | not planned |
+| The AI workflows (`ai-*.yml`), their environments and label trigger | belong to PR #2, not yet merged; CI runs only for PRs into `main` | after PR #2 is retargeted and run |
+| A real model run of the agentic orchestrator | no API key | owner setup |
 | Claude Code `Stop`/`SubagentStop` hooks with a real session | no Claude Code CLI session here | next Claude Code session |
 | Load, soak, failover, backup/restore | out of scope | future |
 | Coverage percentage | not measured; none is claimed | future |
@@ -37,7 +39,7 @@ Reviewer stance: skeptical staff engineer evaluating a senior backend candidate.
 | Sev | Item | Note |
 |---|---|---|
 | **P0** | **AI transcripts are missing** (mandatory requirement) | The assistant cannot export its own transcript. `npm run check:ai-logs` fails, deliberately. The owner must export the claude.ai chat into `ai-logs/` and update `PROMPTS.md`. Tooling, instructions and a gate are in place |
-| P1 | Docker, Terraform validity and CI are unproven | See section 2. The first CI run may find environment differences |
+| P1 | Terraform is validated but never planned or applied | `plan`/`apply` need AWS credentials; semantic errors that only they reveal remain possible |
 | P1 | Processor credential compromise can confirm fake deposits or repayments | Role-limited and audited, not prevented. Needs IdP-issued asymmetric tokens, mTLS or signed webhooks (threat model T14/T15) |
 | P1 | Interest and fees can push owed above the limit and the collateral | Deliberate; shortfall is written off on liquidation. Default ratio 100% leaves no headroom (architecture §4) |
 | P1 | Payout of released collateral is simulated, yet the ledger credits `cash` at close | Needs a "payout in transit" account (architecture §12) |
@@ -62,7 +64,7 @@ Defects found and fixed during this pass are listed in [`audit.md`](audit.md) (F
 | Code readability | Small modules; the transaction pattern repeats identically in every money path. `any` is used for `pg` rows and test bodies (lint rules relaxed knowingly) |
 | Operational readiness | Health/readiness, graceful shutdown (tested), structured logs with request ids, container and IaC written. Unrun in this environment, no runbook, no scheduled `reconcile` |
 | Documentation quality | Describes the code as it is, including limitations; several earlier wrong claims were corrected (audit F11). The README examples were executed |
-| CI reliability | SHA-pinned actions, least privilege, real PostgreSQL service, deterministic tests. Unproven until it runs |
+| CI reliability | SHA-pinned actions, least privilege, real PostgreSQL service, deterministic tests. Ran on GitHub: 4/5 on the first run (one real Docker bug found and fixed), 5/5 on the second |
 | AI transparency compliance | **Not compliant yet** (transcripts). Disclosed openly in `PROMPTS.md`; capture hook and gate prepared |
 
 ## 5. Classification
@@ -76,4 +78,4 @@ Defects found and fixed during this pass are listed in [`audit.md`](audit.md) (F
 
 ## 6. Verdict
 
-Fit for technical review as a correct, well-tested reference implementation with honest documentation. **Not ready to submit** until the AI transcripts are exported (P0) and the first CI run confirms the container, Terraform and workflow. Not production-ready, and it does not claim to be.
+Fit for technical review as a correct, well-tested reference implementation with honest documentation. **Not ready to submit** until the AI transcripts are exported (P0). The container, `terraform validate` and the CI workflow are now confirmed by a green GitHub run. Not production-ready, and it does not claim to be.

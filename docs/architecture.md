@@ -125,13 +125,13 @@ Interest accrues daily on principal (APR default 24%). A statement is issued eve
 
 The API is stateless; any number of tasks can run behind the load balancer because correctness lives in PostgreSQL (row locks, constraints, unique indexes). Contention exists only per account. Connection count is `tasks × POOL_MAX` and must stay under the database limit (use RDS Proxy or PgBouncer beyond a few dozen tasks). Writes scale with the primary; read replicas are not used because reads of balances must be current.
 
-## 11. Deployment on AWS (IaC, not executed)
+## 11. Deployment on AWS (IaC; validated in CI, never applied)
 
 `infra/terraform/`: VPC with two AZs and a NAT, ALB with a TLS 1.3 policy, ECS Fargate service (circuit breaker with rollback, CPU autoscaling, 30 s drain), RDS PostgreSQL 16 Multi-AZ with encryption, 14-day point-in-time recovery and deletion protection, Secrets Manager entries injected by ECS, CloudWatch logs, an EventBridge Scheduler entry for the daily job, a one-off `migrate` task, and an alarm on invariant violations.
 
 Release flow: build image → push to ECR → run the `migrate` task → update the service (rolling, health-checked on `/readyz`, automatic rollback). Migrations must be backward compatible with the previous version because old and new tasks overlap.
 
-> **Verification status:** `terraform fmt` was checked with OpenTofu and the HCL parses. `terraform validate`/`plan` could not run in the build environment (provider registry blocked); the CI `terraform` job runs `fmt -check` and `validate`. Nothing was applied to AWS.
+> **Verification status:** the CI `terraform` job runs `terraform fmt -check` and `terraform validate` against the real AWS provider and passes ([run](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41384405357)). `terraform plan` and `apply` were never run (no AWS credentials), so semantic problems that only a plan reveals remain possible. Nothing was applied to AWS.
 
 ## 12. Simulated boundaries and what changes before production
 

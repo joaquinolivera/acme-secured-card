@@ -76,5 +76,5 @@ These are manual runs, not an automated mutation-testing tool, and cover only th
 * **Load and soak behaviour**, deadlock frequency under heavy contention, large-account performance.
 * **Database failover**, network partitions, crash-during-commit recovery beyond what PostgreSQL guarantees.
 * **Backups and restores.**
-* **Docker image, compose stack, Terraform plan/apply, GitHub Actions**: defined but not executed in the build environment; CI runs them.
+* **Terraform plan/apply** and any deployment: never run. (The Docker image, compose stack with the demo, `terraform fmt`/`validate` and the workflow itself were executed by GitHub CI on PR #1: [run](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41384405357).)
 * **Go-style race detection**: not applicable to Node. Races in the data layer are covered by the concurrent integration tests above.
