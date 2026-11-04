@@ -2,7 +2,7 @@
 
 A small, GitHub-native pipeline that connects **requirements → GitHub Issues → TDD → implementation → independent review → CI → pull request → human approval**. It is deliberately modest: manual triggers, no agent framework, no auto-merge, and nothing that touches the application's business logic.
 
-> **Status:** the tooling is implemented and locally tested with a fake agent CLI (`test/ai-sdlc.test.ts`, 25 tests) and the workflows pass `actionlint`. It has **not** been run on GitHub, and the orchestrator has **not** been run against a real model (no API key and no repository access in the build environment). See [Validation evidence](#8-validation-evidence).
+> **Status:** the tooling is implemented and locally tested with a fake agent CLI (`test/ai-sdlc.test.ts`, 25 tests) and the workflows pass `actionlint`. **Workflow A (backlog planning) has run on GitHub** with `publish` off ([run](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41459514356)): the planning job succeeded, the publish job was skipped, one artifact was uploaded and no issue was created. **Workflow B (issue-driven development) and the orchestrator against a real model have not been run**: that was a deliberate decision by the owner, so the label trigger, the approval environments, headless hooks and draft-PR creation remain unvalidated. See [Validation evidence](#8-validation-evidence).
 
 ## 1. Architecture
 
@@ -115,9 +115,12 @@ Association: every commit made by a run carries `Refs: #N` and `AI-Run: <run-id>
 | Workflow syntax and expression typing | `actionlint` 1.7.12 on all three workflows | clean (shellcheck was not installed, so embedded shell was not shell-checked) |
 | CLI flags used by the orchestrator | pinned CLI `@anthropic-ai/claude-code@2.1.316` installed in a scratch directory: `-p`, `--output-format json`, `--allowedTools`, `--permission-mode`, `--max-budget-usd` accepted; unknown flags rejected; JSON output has `result`, `session_id`, `is_error`, `total_cost_usd` | confirmed. A first draft used `--max-turns`; it is accepted but undocumented, so `--max-budget-usd` is used instead |
 | **A real model run** | not possible without an API key | **not validated** |
-| Workflows on GitHub, environments, label trigger, draft-PR creation, hooks in headless mode | no repository access from the build environment | **not validated** |
+| Workflow A on GitHub, manual dispatch with `publish` off | [run](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41459514356) | planning job passed, publish job skipped, plan table correct, no issues created |
+| Workflow B on GitHub, environments, label trigger, draft-PR creation, hooks in headless mode | not run (owner decision to leave the AI pipeline untested for now) | **not validated** |
 
-Known limitations: a PR opened with the default `GITHUB_TOKEN` does not start CI by itself (GitHub rule), so a human must push or reopen to trigger it, or the workflow must be switched to a fine-grained token or GitHub App; the PR checklist says so. The planning step that drafts `docs/backlog/*.md` is an AI-assisted manual step, not an automated one.
+Known limitations: the backlog drafts have no "done" status, so the planner lists an already-fixed draft (ISSUE-001) as `new`; add a status field and skip finished drafts before relying on workflow A to publish.
+
+Other known limitations: a PR opened with the default `GITHUB_TOKEN` does not start CI by itself (GitHub rule), so a human must push or reopen to trigger it, or the workflow must be switched to a fine-grained token or GitHub App; the PR checklist says so. The planning step that drafts `docs/backlog/*.md` is an AI-assisted manual step, not an automated one.
 
 ## 9. Worked example
 

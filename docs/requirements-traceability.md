@@ -22,7 +22,7 @@ Priority of the **remaining** risk: **P0** can cause financial loss, wrong balan
 | Local run is repeatable | **Verified** | `README.md`; compiled server + `npm run demo` against local PostgreSQL; CI job `docker` builds the image, starts compose and runs the demo against the container ([run](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41384405357)) | P2 | None. The CI run also found and fixed a health-check bug (audit F17) |
 | GitHub Actions CI | **Executed: 5/5 jobs pass** (after one fix) | `.github/workflows/ci.yml`: quality, test (PostgreSQL service), security, docker, terraform; SHA-pinned actions; `permissions: contents: read`. Run 1 failed in `docker` (F17); run 2 passed all five ([run](https://github.com/joaquinolivera/acme-secured-card/actions/runs/41384405357)) | P2 | Runs only for PRs into `main`: stacked PRs (#2, #3) get CI after retargeting |
 | Prompts and AI responses included | **NOT MET.** No transcripts in the repository | `PROMPTS.md`, `ai-logs/`, `npm run check:ai-logs` (currently fails by design) | **P0** | **Owner must export the claude.ai chat(s) into `ai-logs/` and update `PROMPTS.md`** |
-| Thinking process / decisions documented | **Implemented** | `docs/architecture.md`, ADRs, `docs/audit.md`, `docs/interview-notes.md` | P2 | None |
+| Thinking process / decisions documented | **Implemented** | `docs/architecture.md`, ADRs, `docs/audit.md` | P2 | None |
 
 ## Required financial invariants
 

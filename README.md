@@ -10,7 +10,7 @@ A service that owns the lending flow of a **secured credit card**. The customer 
 | [`docs/decisions/`](docs/decisions/) | Seven short ADRs with rejected alternatives |
 | [`docs/threat-model.md`](docs/threat-model.md) · [`docs/test-strategy.md`](docs/test-strategy.md) | Security boundaries; what is tested and how |
 | [`docs/audit.md`](docs/audit.md) · [`docs/requirements-traceability.md`](docs/requirements-traceability.md) · [`docs/engineering-review.md`](docs/engineering-review.md) | What was found and changed, requirement-by-requirement evidence, final review |
-| [`docs/interview-notes.md`](docs/interview-notes.md) · [`PROMPTS.md`](PROMPTS.md) | Interview prep; AI usage and transcript status |
+| [`PROMPTS.md`](PROMPTS.md) | AI usage and transcript status |
 
 ## Quick start
 
