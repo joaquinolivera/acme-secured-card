@@ -6,14 +6,14 @@ Principle: tests exist to catch **financial** failures (money created or lost, o
 
 ```bash
 createdb acme_test                       # once; the harness wipes this schema on every run
-npm test                                 # all 73 tests (needs PostgreSQL)
+npm test                                 # all 106 tests (needs PostgreSQL)
 npm run test:unit                        # pure rules, no database
 npm run verify                           # format check + lint + typecheck + tests + build
 ```
 
 `TEST_DATABASE_URL` (default `postgres://postgres@localhost:5432/acme_test`) selects the database. The harness **refuses to wipe any database whose name does not contain "test"**.
 
-## Inventory (73 tests, 7 files, all passing at the time of writing)
+## Inventory (106 tests, 9 files, all passing at the time of writing)
 
 | File | Tests | Level | Covers |
 |---|---:|---|---|
@@ -24,6 +24,8 @@ npm run verify                           # format check + lint + typecheck + tes
 | `concurrency.test.ts` | 13 | concurrent + DB integrity | 40 parallel purchases, mixed operations, 10 parallel retries of one key, payment-reference re-delivery and cross-account race, capture vs void, parallel webhooks, seeded random operation mix; direct attacks on the schema (append-only, unbalanced commit, CHECKs, audit tamper) |
 | `billing.test.ts` | 8 | API + simulated clock | exact interest, statements from the ledger, late fee once, cure, authorization expiry, liquidation with write-off and with surplus |
 | `shutdown.test.ts` | 1 | process | real server process: health, SIGTERM, clean exit, closed port |
+| `authorization-expiry.test.ts` | 7 | API + simulated clock | late capture of an expired authorization is refused with 409, the hold is released, no debt is created and a retry replays identically (ISSUE-001); capture still works just before and at the expiry instant; only the lapsed hold is released; over-amount late capture reports 409; later captures are refused without changing state |
+| `ai-sdlc.test.ts` | 26 | unit (tooling) | AI-SDLC tooling: backlog validation and duplicate detection, issue-text sanitizing, role-scope guards, RED/GREEN/REVIEW orchestration stop conditions, workflow safety (SHA pins, opt-in, no merge), run-record rendering, the `check:ai-logs` gate |
 
 ## Mapping to the required scenarios
 
