@@ -22,7 +22,7 @@
     "check:ai-logs": "node scripts/check-ai-logs.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "fastify": "^5.12.7",

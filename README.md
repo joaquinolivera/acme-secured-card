@@ -21,7 +21,7 @@ docker compose up --build
 JWT_SECRET=local-dev-secret-change-me-0123456789abcdef npm run demo   # walks the whole flow
 ```
 
-**Without Docker** (Node >= 20, PostgreSQL 16):
+**Without Docker** (Node >= 22, PostgreSQL 16):
 
 ```bash
 npm ci
@@ -35,7 +35,7 @@ npm run migrate && npm run dev                 # other shell, same JWT_SECRET: n
 
 ```bash
 createdb acme_test
-npm run verify      # format check, lint, typecheck, 73 tests, build
+npm run verify      # format check, lint, typecheck, 106 tests, build
 ```
 
 ## Try the API
