@@ -35,7 +35,7 @@
     "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "eslint": "^10.14.0",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.1",
